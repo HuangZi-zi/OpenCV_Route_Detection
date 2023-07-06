@@ -22,22 +22,36 @@ vector<vector<double>> creatmatrix(int h, int l)
 
 int main()
 {   //导入图片
-    string path = "Resources/square.png";
+    //string path = "Resources/square.png";
+    string path = "Resources/right.png";
     Mat img = imread(path);
+
+    //视角变换
     Mat matrix, imgWarp;
-    float w = 210, h = 297;
-    Point2f src[4] = { {213, 181}, {527, 168} ,{102, 423}, {618, 396}};
+    float w = 240, h = 630;
+    Point2f src[4] = { {182, 56}, {440, 37} ,{3, 457}, {622, 413}};
     Point2f dst[4] = { {0.0f, 0.0f}, {w, 0.0f}, {0.0f, h}, {w, h} };
     matrix = getPerspectiveTransform(src, dst);
+    warpPerspective(img, imgWarp, matrix,Point(w,h));
     
-    warpPerspective(img, imgWarp, matrix,Point(640,480));
+    //图像处理
+    Mat kernel_dil = getStructuringElement(MORPH_RECT, Size(3, 3));
+    Mat kernel_erode = getStructuringElement(-MORPH_RECT, Size(9, 9));
+        //灰度
+    cvtColor(imgWarp, imgWarp, COLOR_BGR2GRAY);
+        //二值化
+    threshold(imgWarp, imgWarp, 100, 255, cv::THRESH_BINARY);
+        //膨胀
+    dilate(imgWarp, imgWarp, kernel_dil);
+        //模糊
+    GaussianBlur(imgWarp, imgWarp, Size(9, 9), 3, 3);
+        //腐蚀
+    erode(imgWarp, imgWarp, kernel_erode);
 
-        for (int i = 0; i < 4; i++) {
-            circle(img, src[i], 10, Scalar(0, 0, 255), FILLED);
-        }
 
         imshow("Image", img);
         imshow("ImageWarp", imgWarp);
+
         waitKey(0);
 
 
