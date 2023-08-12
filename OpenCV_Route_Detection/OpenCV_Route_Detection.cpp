@@ -10,12 +10,12 @@
 #include <opencv2/core/types_c.h>
 
 #include "SendByte.h"
-#include "Image.h"
 
 using namespace cv;
 using namespace std;
 
-int ProcessImg(Mat& img)
+/*图像形态学操作*/
+int ProcessImg(Mat& img, Mat& imgCanny)
 {
     //视角变换
     Mat imgWarp;
@@ -46,42 +46,118 @@ int ProcessImg(Mat& img)
     //imshow("ImageWarp", imgWarp);
 
     //边缘查找
-    Mat imgCanny;
     Canny(imgWarp, imgCanny, 25, 75);
+    //dilate(imgCanny, imgCanny, kernel_dil);
     imshow("ImageCanny", imgCanny);
 
     vector<vector<Point>> contours;
     vector<Vec4i> hierachy;
     findContours(imgCanny, contours, hierachy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    img = imgWarp;
+    //imshow("ImageWarp", imgWarp);
     return contours.size();
 }
 
+/*遍历像素*/
+class PixelVisit {
+public:
+    int high_pixel;
+    int low_pixel;
+public:
+    void mat_pixel_visit_ptr(Mat& image);
+    PixelVisit() {  }
+    ~PixelVisit() {  }
+};
+
+void PixelVisit::mat_pixel_visit_ptr(Mat& image)
+{
+    int w = image.cols, h = image.rows;
+    //high
+    int blackPixelCount_High = 0;
+    int blackPixelAddress_High[640];
+    int blackPixelCount_Low = 0;
+    int blackPixelAddress_Low[640];
+
+        uchar* rowData1 = image.ptr(50);
+        for (int col = 0; col < image.cols; ++col)
+        {
+            if (rowData1[col] == 0)
+            {
+                blackPixelAddress_High[blackPixelCount_High++] = col;
+            }
+        }
+    
+    //low
+    
+        uchar* rowData2 = image.ptr(430);
+        for (int col = 0; col < image.cols; ++col)
+        {
+            if (rowData2[col] == 0)
+            {
+                blackPixelAddress_Low[blackPixelCount_Low++] = col;
+            }
+        }
+    
+    high_pixel = blackPixelAddress_High[5];
+    low_pixel = blackPixelAddress_Low[5];
+}
+
+
+
 int main()
 {
-    Mat img;
+    Mat img,imgCanny;
     //导入图片
     //string path = "Resources/square.png";
-    string path = "Resources/left.png";
-    img = imread(path);
-    imshow("img", img);
-    int size;
-    size=ProcessImg(img);
-    cout << size << endl;
-    if (size>= 2)
-    {
-        //前进
-        cout << "forward" << endl;
-        //Send(COMM_FORWARD);
-    }
-    vector<Vec4i> plines;
-    HoughLinesP(img, plines, 1, CV_PI / 180, 150, 10, 10);
-    for (size_t i = 0; i < plines.size(); i++)
-    {
-        Vec4i points = plines[i];
-        line(img, Point(points[0], points[1]), Point(points[2], points[3]), Scalar(0, 255, 255), 3, CV_AA);
-    }
-    imshow("output", img);
+    //string path = "Resources/left.png";
+    
+    //导入视频
+    string Vpath = "http://192.168.1.1:8080/?action=stream";
+    VideoCapture cap(Vpath);
 
+
+
+
+    PixelVisit qd;
+    int size;
+    //while(1)
+    {
+        //img = imread(path);
+        cap.read(img);
+        if (img.empty())
+        {
+            cout << "could not load image...." << endl;
+            return -1;
+        }
+
+        //imshow("img", img);
+        size = ProcessImg(img, imgCanny);
+        cout << size << endl;
+        if (size >= 2)
+        {
+            //前进
+            cout << "forward" << endl;
+            Send(COMM_FORWARD);
+        }
+        else
+        {
+
+            qd.mat_pixel_visit_ptr(img);
+            if (qd.high_pixel > qd.low_pixel)
+            {
+                //右转
+                cout << "right" << endl;
+                Send(COMM_RIGHT);
+            }
+            else
+            {
+                //左转
+                cout << "left" << endl;
+                Send(COMM_LEFT);
+            }
+        }
+    }
+    
     waitKey(0);
 
 
@@ -89,16 +165,7 @@ int main()
 
 
     
-    //导入视频
-    //string Vpath = "http://192.168.1.1:8080/?action=stream";
-    //VideoCapture cap(Vpath);
-    //Mat img;
-    //while (true)
-    //{
-    //    cap.read(img);
-    //    imshow("Image", img);
-    //    waitKey(20);
-    //}
+
 
 
 
