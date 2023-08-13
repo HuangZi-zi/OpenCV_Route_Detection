@@ -15,54 +15,61 @@ using namespace cv;
 using namespace std;
 
 /*图像形态学操作*/
-int ProcessImg(Mat& img, Mat& imgCanny)
+int ProcessImg(Mat& origin, Mat& img, Mat& imgCanny)
 {
-    //视角变换
-    Mat imgWarp;
-    //float w = 240, h = 630;
-    //Point2f src[4] = { {182, 56}, {440, 37} ,{3, 457}, {622, 413}};
-    //Point2f dst[4] = { {0.0f, 0.0f}, {w, 0.0f}, {0.0f, h}, {w, h} };
-    //matrix = getPerspectiveTransform(src, dst);
-    //warpPerspective(img, imgWarp, matrix,Point(w,h));
-    imgWarp = img;
+    //添加白色边框
+    copyMakeBorder(origin, img, 3, 3, 3, 3, BORDER_CONSTANT, Scalar(255, 255, 255));
+    int size = 0;
+    //imshow("Image", img);
 
     //图像处理
     Mat kernel_dil = getStructuringElement(MORPH_RECT, Size(5, 5));
     Mat kernel_erode = getStructuringElement(-MORPH_RECT, Size(9, 9));
     //灰度
-    cvtColor(imgWarp, imgWarp, COLOR_BGR2GRAY);
+    cvtColor(img, img, COLOR_BGR2GRAY);
     //二值化
-    threshold(imgWarp, imgWarp, 80, 255, cv::THRESH_BINARY);
+    threshold(img, img, 80, 255, cv::THRESH_BINARY);
     //膨胀
-    dilate(imgWarp, imgWarp, kernel_dil);
+    dilate(img, img, kernel_dil);
     //模糊
-    GaussianBlur(imgWarp, imgWarp, Size(9, 9), 3, 3);
-    //imshow("ImageWarp", imgWarp);
+    GaussianBlur(img, img, Size(9, 9), 3, 3);
+    //imshow("Image", img);
         //腐蚀
-    erode(imgWarp, imgWarp, kernel_erode);
-    //imshow("ImageWarp", imgWarp);
+    erode(img, img, kernel_erode);
+    //imshow("Image", img);
         //再次二值化
-    threshold(imgWarp, imgWarp, 80, 255, cv::THRESH_BINARY);
-    //imshow("ImageWarp", imgWarp);
+    threshold(img, img, 80, 255, cv::THRESH_BINARY);
+    imshow("Processed", img);
 
     //边缘查找
-    Canny(imgWarp, imgCanny, 25, 75);
-    //dilate(imgCanny, imgCanny, kernel_dil);
-    imshow("ImageCanny", imgCanny);
+    Canny(img, imgCanny, 25, 75);
+    dilate(imgCanny, imgCanny, kernel_dil);
+    //imshow("ImageCanny", imgCanny);
 
     vector<vector<Point>> contours;
     vector<Vec4i> hierachy;
     findContours(imgCanny, contours, hierachy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    img = imgWarp;
-    //imshow("ImageWarp", imgWarp);
-    return contours.size();
+    //cout << "Total contours size " << contours.size() << endl;
+    for (int i = 0; i < contours.size(); i++)
+    {
+        //drawContours(origin, contours, i, Scalar(255, 0, 255), 2);
+        int area = contourArea(contours[i]);
+        //cout << "contour " << i << " " << area << endl;
+        if (area > 2000)
+        {
+            size++;
+        }
+    }
+    //cout << "Recognized contours size "<< size << endl;
+    //imshow("contours", origin);
+    return size;
 }
 
 /*遍历像素*/
 class PixelVisit {
 public:
-    int high_pixel;
-    int low_pixel;
+    int high_pixel = 0;
+    int low_pixel = 0;
 public:
     void mat_pixel_visit_ptr(Mat& image);
     PixelVisit() {  }
@@ -78,26 +85,26 @@ void PixelVisit::mat_pixel_visit_ptr(Mat& image)
     int blackPixelCount_Low = 0;
     int blackPixelAddress_Low[640];
 
-        uchar* rowData1 = image.ptr(50);
-        for (int col = 0; col < image.cols; ++col)
+    uchar* rowData1 = image.ptr(90);
+    for (int col = 0; col < image.cols; ++col)
+    {
+        if (rowData1[col] == 0)
         {
-            if (rowData1[col] == 0)
-            {
-                blackPixelAddress_High[blackPixelCount_High++] = col;
-            }
+            blackPixelAddress_High[blackPixelCount_High++] = col;
         }
-    
+    }
+
     //low
-    
-        uchar* rowData2 = image.ptr(430);
-        for (int col = 0; col < image.cols; ++col)
+
+    uchar* rowData2 = image.ptr(150);
+    for (int col = 0; col < image.cols; ++col)
+    {
+        if (rowData2[col] == 0)
         {
-            if (rowData2[col] == 0)
-            {
-                blackPixelAddress_Low[blackPixelCount_Low++] = col;
-            }
+            blackPixelAddress_Low[blackPixelCount_Low++] = col;
         }
-    
+    }
+
     high_pixel = blackPixelAddress_High[5];
     low_pixel = blackPixelAddress_Low[5];
 }
@@ -106,33 +113,29 @@ void PixelVisit::mat_pixel_visit_ptr(Mat& image)
 
 int main()
 {
-    Mat img,imgCanny;
+    Mat origin, imgCanny;
+    Mat img;
     //导入图片
-    //string path = "Resources/square.png";
-    //string path = "Resources/left.png";
-    
+    string path = "Resources/square.png";
+    //string path = "Resources/forward.png";
+
     //导入视频
     string Vpath = "http://192.168.1.1:8080/?action=stream";
     VideoCapture cap(Vpath);
 
-
-
-
     PixelVisit qd;
     int size;
-    //while(1)
+    while(1)
     {
-        //img = imread(path);
-        cap.read(img);
-        if (img.empty())
+        //origin = imread(path);
+        cap.read(origin);
+        if (origin.empty())
         {
             cout << "could not load image...." << endl;
             return -1;
         }
 
-        //imshow("img", img);
-        size = ProcessImg(img, imgCanny);
-        cout << size << endl;
+        size = ProcessImg(origin, img, imgCanny);
         if (size >= 2)
         {
             //前进
@@ -156,20 +159,9 @@ int main()
                 Send(COMM_LEFT);
             }
         }
+
+        waitKey(10);
     }
-    
-    waitKey(0);
-
-
-
-
-
-    
-
-
-
-
-
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
