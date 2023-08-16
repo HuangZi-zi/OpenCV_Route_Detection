@@ -1,4 +1,8 @@
 ﻿  OpenCV_Route_Detection.cpp
 C:\Users\YawnFun\Documents\opencv\build\include\opencv2\objdetect\aruco_board.hpp(1,1): warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
-C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(56,18): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(48,14): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(58,31): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(63,31): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(65,31): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\OpenCV_Route_Detection\OpenCV_Route_Detection.cpp(138,9): warning C4101: 'size': unreferenced local variable
   OpenCV_Route_Detection.vcxproj -> C:\Users\YawnFun\Documents\project\OpenCV_Route_Detection\bin\x64\Debug\OpenCV_Route_Detection.exe

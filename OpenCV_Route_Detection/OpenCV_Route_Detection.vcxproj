@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="odd.cpp" />
     <ClCompile Include="OpenCV_Route_Detection.cpp" />
     <ClCompile Include="SendByte.cpp" />
   </ItemGroup>
