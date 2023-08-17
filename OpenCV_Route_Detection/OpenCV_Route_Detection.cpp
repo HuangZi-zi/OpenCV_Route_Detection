@@ -177,7 +177,7 @@ void ImgProcess::Get_Command()
         break;
     case 111:
     case  11:
-        if (status[1]-status[2]>0)
+        if (status[1] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
             cout << "RIGHT" << endl;
@@ -189,7 +189,7 @@ void ImgProcess::Get_Command()
         }
         break;
     case 110:
-        if (status[0] - status[1] > 0)
+        if (status[0] - status[1] > 0 && position[1][0] < 200)
         {
             command = COMM_RIGHT;
             cout << "RIGHT" << endl;
@@ -201,7 +201,7 @@ void ImgProcess::Get_Command()
         }
         break;
     case 101:
-        if (status[0] - status[2] > 0)
+        if (status[0] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
             cout << "RIGHT" << endl;
@@ -253,7 +253,7 @@ int main()
         Send(IMGPROCESS.command);
         
 
-        waitKey(500);
+        waitKey(100);
     }
 }
 
