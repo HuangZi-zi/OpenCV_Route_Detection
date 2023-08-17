@@ -22,8 +22,7 @@ private:
     //string path = "Resources/square.png";
     string path = "Resources/right.png";
     //导入视频
-    string Vpath = "http://192.168.1.1:8080/?action=stream";
-    
+    string Vpath = "http://192.168.1.1:8080/?action=stream";  
 public:
     void import_picture(Mat& origin);
     void import_video(Mat& origin);
@@ -32,7 +31,7 @@ public:
     Mat img_segment[3];//上、中、下三个判别区域
     int position[3][2];//左、右标线的中心X座标
     int status[3];//道路中心座标
-    int flag=0;//有效标识点数目
+    int flag=0;//上中下三个判别区域的标识点情况
     char command = COMM_BRAKE;
 };
 
@@ -113,6 +112,7 @@ void ImgProcess::Find_Position()
         findContours(img_segment[i], contours, hierachy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point());
         int size = contours.size();
         //cout << "size of segment " << i << " is " << size << endl;
+        flag *= 10;
         switch (size)
         {
         case 0:
@@ -123,17 +123,17 @@ void ImgProcess::Find_Position()
             M = moments(contours[0]);
             position[i][0] = int(M.m10 / M.m00);
             position[i][1] = 0;
-            flag++;
+            flag += 1;
             break;
         default:
             M = moments(contours[0]);
             position[i][0] = int(M.m10 / M.m00);
             M = moments(contours[1]);
             position[i][1] = int(M.m10 / M.m00);
-            flag++;
+            flag += 2;
             break;
         }
-        cout << "1: " << position[i][0] << "; " << "2: " << position[i][1] << endl;
+        //cout << "1: " << position[i][0] << "; " << "2: " << position[i][1] << endl;
         status[i] = (position[i][0] + position[i][1]) / 2;
         //drawContours(img_segment[i], contours, -1, Scalar(0, 255, 0), 2);
         circle(output, Point2d(position[i][0], i * 80 + 20), 1, Scalar(255, 0, 255), 2, 8, 0);
@@ -152,32 +152,32 @@ void ImgProcess::Get_Command()
 {
     switch (flag)
     {
-    case 0:
-    case 1:
-        command = COMM_BACK;
-        cout << "BACK" << endl;
+    case 222:
+    case  22:
+    case 202:
+    case 220:
+    case 122:
+    case 212:
+    case 221:
+    case 112:
+    case 121:
+    case 211:
+    case  12:
+    case 102:
+    case 120:
+    case  21:
+    case 201:
+    case 210:
+    case 200:
+    case  20:
+    case   2:
+        command = COMM_FORWARD;
+        cout << "FORWARD" << endl;
+        //cout << command << endl;
         break;
-    case 2:
-    default:
-        break;
-    }
-    int left = 0, right = 0;
-    //left = position[0][0] + position[1][0] + position[2][0];
-    //right = position[0][1] + position[1][1] + position[2][1];
-    for (int i = 0; i < 3; i++)
-    {
-        if (status[i])
-        {
-        }
-    }
-    if (status[0]==0&&status[1] == 0)
-    {
-        
-    }
-
-    if (command == COMM_BRAKE)
-    {
-        if (position[0][0] - position[2][0] > 0)
+    case 111:
+    case  11:
+        if (status[1]-status[2]>0)
         {
             command = COMM_RIGHT;
             cout << "RIGHT" << endl;
@@ -187,11 +187,44 @@ void ImgProcess::Get_Command()
             command = COMM_LEFT;
             cout << "LEFT" << endl;
         }
+        break;
+    case 110:
+        if (status[0] - status[1] > 0)
+        {
+            command = COMM_RIGHT;
+            cout << "RIGHT" << endl;
+        }
+        else
+        {
+            command = COMM_LEFT;
+            cout << "LEFT" << endl;
+        }
+        break;
+    case 101:
+        if (status[0] - status[2] > 0)
+        {
+            command = COMM_RIGHT;
+            cout << "RIGHT" << endl;
+        }
+        else
+        {
+            command = COMM_LEFT;
+            cout << "LEFT" << endl;
+        }
+        break;
+    case 100:
+    case  10:
+    case   1:
+    case   0:
+        command = COMM_BACK;
+        cout << "BACK" << endl;
+        break;
+    default:
+        command = COMM_BRAKE;
+        cout << "ERR!!!" << endl;
+        break;
     }
-    
-    command = COMM_FORWARD;
-    cout << "FORWARD" << endl;
-
+    flag = 0;
 }
 
 
@@ -205,8 +238,8 @@ int main()
     int size;
     while(1)
     {
-        IMG.import_picture(origin);
-        //IMG.import_video(origin);
+        //IMG.import_picture(origin);
+        IMG.import_video(origin);
         if (origin.empty())
         {
             cout << "could not load image...." << endl;
@@ -215,10 +248,12 @@ int main()
         IMGPROCESS.Basic_Process(origin);
         IMGPROCESS.Find_Position();
 
-        //Send(IMG.command);
+        IMGPROCESS.Get_Command();
+        cout << IMGPROCESS.command << endl;
+        Send(IMGPROCESS.command);
         
 
-        waitKey(0);
+        waitKey(500);
     }
 }
 
