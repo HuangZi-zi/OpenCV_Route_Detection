@@ -67,6 +67,7 @@ void ImgProcess::Basic_Process(Mat& img)
 
     //灰度
     cvtColor(img, img, COLOR_BGR2GRAY);
+
     //二值化
     threshold(img, img, 80, 255, cv::THRESH_BINARY);
     //膨胀
@@ -249,11 +250,11 @@ int main()
         IMGPROCESS.Find_Position();
 
         IMGPROCESS.Get_Command();
-        cout << IMGPROCESS.command << endl;
+        //cout << IMGPROCESS.command << endl;
         Send(IMGPROCESS.command);
         
 
-        waitKey(100);
+        waitKey(40);
     }
 }
 
