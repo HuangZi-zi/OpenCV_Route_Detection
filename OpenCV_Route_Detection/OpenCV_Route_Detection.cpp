@@ -2,6 +2,8 @@
 //
 
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -22,7 +24,8 @@ private:
     //string path = "Resources/square.png";
     string path = "Resources/right.png";
     //µº»Î ”∆µ
-    string Vpath = "http://192.168.1.1:8080/?action=stream";  
+    string Vpath = "http://192.168.1.1:8080/?action=stream&type=.mjpg";  
+    //string Vpath = "http://192.168.1.1:8080/?action=snapshot&type=.mjpg";
 public:
     void import_picture(Mat& origin);
     void import_video(Mat& origin);
@@ -43,6 +46,8 @@ void Img::import_video(Mat& origin)
 {
     static VideoCapture cap(Vpath);
     cap.read(origin);
+    //origin = imread(Vpath);
+    imshow("origin", origin);
 }
 
 class ImgProcess: public Img{
@@ -173,7 +178,7 @@ void ImgProcess::Get_Command()
     case  20:
     case   2:
         command = COMM_FORWARD;
-        cout << "FORWARD" << endl;
+        //cout << "FORWARD" << endl;
         //cout << command << endl;
         break;
     case 111:
@@ -181,36 +186,36 @@ void ImgProcess::Get_Command()
         if (status[1] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
+            //cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            cout << "LEFT" << endl;
+            //cout << "LEFT" << endl;
         }
         break;
     case 110:
         if (status[0] - status[1] > 0 && position[1][0] < 200)
         {
             command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
+            //cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            cout << "LEFT" << endl;
+            //cout << "LEFT" << endl;
         }
         break;
     case 101:
         if (status[0] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
+            //cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            cout << "LEFT" << endl;
+            //cout << "LEFT" << endl;
         }
         break;
     case 100:
@@ -218,7 +223,7 @@ void ImgProcess::Get_Command()
     case   1:
     case   0:
         command = COMM_BACK;
-        cout << "BACK" << endl;
+        //cout << "BACK" << endl;
         break;
     default:
         command = COMM_BRAKE;
@@ -229,7 +234,6 @@ void ImgProcess::Get_Command()
 }
 
 
-
 int main()
 {
     ImgProcess IMGPROCESS;
@@ -237,8 +241,22 @@ int main()
     Mat origin, imgCanny;
 
     int size;
+
+
+    // Create a thread for sending data
+    std::thread senderThread([&IMGPROCESS]()
+        {
+            while (true)
+            {
+                Send(IMGPROCESS.command);
+                cout << IMGPROCESS.command << endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+        });
+
     while(1)
     {
+
         //IMG.import_picture(origin);
         IMG.import_video(origin);
         if (origin.empty())
@@ -251,10 +269,11 @@ int main()
 
         IMGPROCESS.Get_Command();
         //cout << IMGPROCESS.command << endl;
-        Send(IMGPROCESS.command);
         
+        waitKey(1);
 
-        waitKey(40);
+        // Join the sender thread to wait for it to finish before exiting
+        //senderThread.join();
     }
 }
 

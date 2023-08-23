@@ -1,5 +1,9 @@
 #include "SendByte.h"
 #include <Ws2tcpip.h>
+#include <iostream>
+#include <thread>
+#include <chrono>
+
 
 int Send(char data)
 {
