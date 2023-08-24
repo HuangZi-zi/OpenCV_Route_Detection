@@ -53,4 +53,4 @@
 # 0824
 检查发现0823的代码仍然无法有效降低延时，可能原因是使用了网络代理（未测试）
 
-参考https://blog.csdn.net/GEANNACAO/article/details/108182054?spm=1001.2014.3001.5502解决方案，修改视频读取方式，代码未完成
+参考https://blog.csdn.net/GEANNACAO/article/details/108182054?spm=1001.2014.3001.5502解决方案，修改视频读取方式，用新的线程完成读取操作，降低延时到150ms左右

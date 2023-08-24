@@ -19,22 +19,15 @@
 using namespace cv;
 using namespace std;
 
-
+vector<Mat> m_vec_frame;    //视频缓存容器
 
 class Img {
 private:
     //导入图片
     //string path = "Resources/square.png";
     string path = "Resources/right.png";
-    //导入视频
-    string Vpath = "http://192.168.1.1:8080/?action=stream&type=.mjpg";  
-    //string Vpath = "http://192.168.1.1:8080/?action=snapshot&type=.mjpg";
-
-
 public:
     void import_picture(Mat& origin);
-    void set_import_video(Mat& origin);
-    void capture_frame(Mat& origin);
 public:
     Mat output;
     Mat img_segment[3];//上、中、下三个判别区域
@@ -42,29 +35,13 @@ public:
     int status[3];//道路中心座标
     int flag=0;//上中下三个判别区域的标识点情况
     char command = COMM_BRAKE;
-
-    vector<Mat> m_vec_frame;    //缓存容器
-    VideoCapture cap;
 };
 
 void Img::import_picture(Mat& origin)
 {
     origin = imread(path);
 }
-void Img::set_import_video(Mat& origin)
-{
-    cap.open(Vpath);
-    cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
-    cap >> origin;
-    //cap.read(origin);
-    //origin = imread(Vpath);
-    //imshow("origin", origin);
-}
 
-void Img::capture_frame(Mat& origin)
-{
-    cap >> origin;
-}
 class ImgProcess: public Img{
 public:
     //膨胀白色变多
@@ -248,41 +225,47 @@ void ImgProcess::Get_Command()
     flag = 0;
 }
 
+/*读取视频*/
+void capture_frame(void)
+{
+    Mat origin;
+    //导入视频
+    string Vpath = "http://192.168.1.1:8080/?action=stream";
+    VideoCapture cap;
+    cap.open(Vpath);
+    cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    if (!cap.isOpened())
+    {
+        cout << "can't open camera!" << endl;
+    }
+    cap >> origin;
+
+    Sleep(50);//初始化等待延时
+
+    while (1)
+    {
+        cap >> origin;       
+        if (origin.empty())
+        {
+            cout << "this frame is empty!" << endl;
+            return;
+        }
+        if (m_vec_frame.size() > 3) m_vec_frame.clear();//缓存过多时丢掉缓存的内容以保证实时性
+
+        m_vec_frame.push_back(origin);
+    }
+}
 
 int main()
 {
     ImgProcess IMGPROCESS;
     Img IMG;
-    Mat origin, imgCanny;
-
+    Mat frame;
     int size;
 
     // Create a thread for capturing image
-    std::thread captureThread([&IMG, &origin]()
-        {
-            //IMG.import_picture(origin);
-            IMG.set_import_video(origin);
-            Sleep(50);//初始化等待延时
-            while (1)
-            {
-                //IMG.capture_frame(origin);
-                IMG.cap >> origin;
-                resize(current_frame, current_frame, Size(current_frame.cols / 2, current_frame.rows / 2), 0, 0, INTER_LINEAR);//1600*1200太大了，缩小到800*600
-                if (current_frame.empty())
-                {
-                    cout << "frame empty\n" << endl;
-                    return;
-                }
-                if (m_vec_frame.size() > 3)//测试后发现3的延时最小
-                    m_vec_frame.clear();
-                //存入容器
-                m_vec_frame.push_back(frame);
-
-
-            }
-        }
-
-    );
+    std::thread captureThread(capture_frame);
+    captureThread.detach();
 
     // Create a thread for sending data
     std::thread senderThread([&IMGPROCESS]()
@@ -290,27 +273,27 @@ int main()
             while (true)
             {
                 Send(IMGPROCESS.command);
-                cout << IMGPROCESS.command << endl;
+                //cout << IMGPROCESS.command << endl;
+                cout << endl;
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
         });
+    senderThread.detach();
+
+    Sleep(2000);//等待读取视频的线程初始化
 
     while(1)
     {
-
-
-        if (origin.empty())
+        if (m_vec_frame.size() >= 1)
         {
-            cout << "could not load image...." << endl;
-            return -1;
+            frame = m_vec_frame.back();
+            imshow("origin", frame);
+            IMGPROCESS.Basic_Process(frame);
+            IMGPROCESS.Find_Position();
+            IMGPROCESS.Get_Command();
+            //cout << IMGPROCESS.command << endl;
         }
-        IMGPROCESS.Basic_Process(origin);
-        IMGPROCESS.Find_Position();
-
-        IMGPROCESS.Get_Command();
-        //cout << IMGPROCESS.command << endl;
-        
-        waitKey(1);
+        waitKey(20);
 
     }
 }
