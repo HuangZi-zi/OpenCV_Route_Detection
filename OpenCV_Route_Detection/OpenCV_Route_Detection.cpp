@@ -10,6 +10,9 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/core/types_c.h>
+#include <opencv2/core/core.hpp>
+
+
 
 #include "SendByte.h"
 
@@ -26,9 +29,12 @@ private:
     //导入视频
     string Vpath = "http://192.168.1.1:8080/?action=stream&type=.mjpg";  
     //string Vpath = "http://192.168.1.1:8080/?action=snapshot&type=.mjpg";
+
+
 public:
     void import_picture(Mat& origin);
-    void import_video(Mat& origin);
+    void set_import_video(Mat& origin);
+    void capture_frame(Mat& origin);
 public:
     Mat output;
     Mat img_segment[3];//上、中、下三个判别区域
@@ -36,20 +42,29 @@ public:
     int status[3];//道路中心座标
     int flag=0;//上中下三个判别区域的标识点情况
     char command = COMM_BRAKE;
+
+    vector<Mat> m_vec_frame;    //缓存容器
+    VideoCapture cap;
 };
 
 void Img::import_picture(Mat& origin)
 {
     origin = imread(path);
 }
-void Img::import_video(Mat& origin)
+void Img::set_import_video(Mat& origin)
 {
-    static VideoCapture cap(Vpath);
-    cap.read(origin);
+    cap.open(Vpath);
+    cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    cap >> origin;
+    //cap.read(origin);
     //origin = imread(Vpath);
-    imshow("origin", origin);
+    //imshow("origin", origin);
 }
 
+void Img::capture_frame(Mat& origin)
+{
+    cap >> origin;
+}
 class ImgProcess: public Img{
 public:
     //膨胀白色变多
@@ -178,7 +193,7 @@ void ImgProcess::Get_Command()
     case  20:
     case   2:
         command = COMM_FORWARD;
-        //cout << "FORWARD" << endl;
+        cout << "FORWARD" << endl;
         //cout << command << endl;
         break;
     case 111:
@@ -186,36 +201,36 @@ void ImgProcess::Get_Command()
         if (status[1] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
-            //cout << "RIGHT" << endl;
+            cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            //cout << "LEFT" << endl;
+            cout << "LEFT" << endl;
         }
         break;
     case 110:
         if (status[0] - status[1] > 0 && position[1][0] < 200)
         {
             command = COMM_RIGHT;
-            //cout << "RIGHT" << endl;
+            cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            //cout << "LEFT" << endl;
+            cout << "LEFT" << endl;
         }
         break;
     case 101:
         if (status[0] - status[2] > 0 && position[2][0] < 160)
         {
             command = COMM_RIGHT;
-            //cout << "RIGHT" << endl;
+            cout << "RIGHT" << endl;
         }
         else
         {
             command = COMM_LEFT;
-            //cout << "LEFT" << endl;
+            cout << "LEFT" << endl;
         }
         break;
     case 100:
@@ -223,7 +238,7 @@ void ImgProcess::Get_Command()
     case   1:
     case   0:
         command = COMM_BACK;
-        //cout << "BACK" << endl;
+        cout << "BACK" << endl;
         break;
     default:
         command = COMM_BRAKE;
@@ -242,6 +257,32 @@ int main()
 
     int size;
 
+    // Create a thread for capturing image
+    std::thread captureThread([&IMG, &origin]()
+        {
+            //IMG.import_picture(origin);
+            IMG.set_import_video(origin);
+            Sleep(50);//初始化等待延时
+            while (1)
+            {
+                //IMG.capture_frame(origin);
+                IMG.cap >> origin;
+                resize(current_frame, current_frame, Size(current_frame.cols / 2, current_frame.rows / 2), 0, 0, INTER_LINEAR);//1600*1200太大了，缩小到800*600
+                if (current_frame.empty())
+                {
+                    cout << "frame empty\n" << endl;
+                    return;
+                }
+                if (m_vec_frame.size() > 3)//测试后发现3的延时最小
+                    m_vec_frame.clear();
+                //存入容器
+                m_vec_frame.push_back(frame);
+
+
+            }
+        }
+
+    );
 
     // Create a thread for sending data
     std::thread senderThread([&IMGPROCESS]()
@@ -257,8 +298,7 @@ int main()
     while(1)
     {
 
-        //IMG.import_picture(origin);
-        IMG.import_video(origin);
+
         if (origin.empty())
         {
             cout << "could not load image...." << endl;
@@ -272,8 +312,6 @@ int main()
         
         waitKey(1);
 
-        // Join the sender thread to wait for it to finish before exiting
-        //senderThread.join();
     }
 }
 
