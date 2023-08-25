@@ -25,16 +25,18 @@ class Img {
 private:
     //导入图片
     //string path = "Resources/square.png";
-    string path = "Resources/right.png";
+    string path = "Resources/light2.png";
 public:
     void import_picture(Mat& origin);
 public:
     Mat output;
+    Mat mask;//高光区遮罩
     Mat img_segment[3];//上、中、下三个判别区域
     int position[3][2];//左、右标线的中心X座标
     int status[3];//道路中心座标
     int flag=0;//上中下三个判别区域的标识点情况
     char command = COMM_BRAKE;
+    Scalar t;//二值化阈值
 };
 
 void Img::import_picture(Mat& origin)
@@ -47,6 +49,7 @@ public:
     //膨胀白色变多
     Mat kernel_dil_3 = getStructuringElement(MORPH_RECT, Size(3, 3));
     Mat kernel_dil_5 = getStructuringElement(MORPH_RECT, Size(5, 5));
+    Mat kernel_dil_7 = getStructuringElement(MORPH_RECT, Size(7, 7));
     Mat kernel_dil_9 = getStructuringElement(MORPH_RECT, Size(9, 9));
     //腐蚀黑色变多
     Mat kernel_erode_3 = getStructuringElement(-MORPH_RECT, Size(3, 3));
@@ -55,22 +58,42 @@ public:
     void Basic_Process(Mat& img);
     void Find_Position();
     void Get_Command();
+    void Prepare_LUTS();
+public:
+    Mat lookUpTable;
 };
 
 /*图像基本处理*/
 void ImgProcess::Basic_Process(Mat& img)
 {
     //imshow("origin", img);
+    
 
+    
+    //亮度调整
+    LUT(img, lookUpTable, img);
+    //imshow("luts", img);
+    //cvtColor(img, mask, COLOR_BGR2GRAY);    
+    //t = mean(mask);
+    //threshold(mask, mask, t[0]+30, 255, cv::THRESH_BINARY);
+    ////imshow("mask", mask);
+    //illuminationChange(img, mask, img, 0.2, 0.4);
+    ////imshow("no highlight", img);
+    img.convertTo(img, -1, 1.5, -30.0);
+    //imshow("contrast", img);
+
+    
     //灰度
     cvtColor(img, img, COLOR_BGR2GRAY);
-
     //二值化
-    threshold(img, img, 80, 255, cv::THRESH_BINARY);
+    t = mean(img);
+    threshold(img, img, 55, 255, cv::THRESH_BINARY);
+    //imshow("after threshold", img);
     //膨胀
-    dilate(img, img, kernel_dil_5);
+    dilate(img, img, kernel_dil_7);
+    //imshow("dilate", img);
     //模糊
-    GaussianBlur(img, img, Size(9, 9), 3, 3);
+    GaussianBlur(img, img, Size(11, 11), 5, 5);
     //imshow("blur", img);
     //腐蚀
     erode(img, img, kernel_erode_9);
@@ -225,6 +248,15 @@ void ImgProcess::Get_Command()
     flag = 0;
 }
 
+/*计算查找表*/
+void ImgProcess::Prepare_LUTS()
+{
+    lookUpTable = Mat_<uchar>(1, 256);
+    uchar* p = lookUpTable.ptr();
+    for (int i = 0; i < 256; ++i)
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, 1.75) * 255.0);
+}
+
 /*读取视频*/
 void capture_frame(void)
 {
@@ -262,7 +294,10 @@ int main()
     Img IMG;
     Mat frame;
     int size;
+    
+    IMGPROCESS.Prepare_LUTS();
 
+    
     // Create a thread for capturing image
     std::thread captureThread(capture_frame);
     captureThread.detach();
@@ -281,7 +316,16 @@ int main()
     senderThread.detach();
 
     Sleep(2000);//等待读取视频的线程初始化
+    
 
+    ////这一段用来导入图片并处理
+    //IMG.import_picture(frame);
+    //imshow("origin", frame);
+    //IMGPROCESS.Basic_Process(frame);
+    //IMGPROCESS.Find_Position();
+    //waitKey(0);
+
+    
     while(1)
     {
         if (m_vec_frame.size() >= 1)
@@ -293,9 +337,9 @@ int main()
             IMGPROCESS.Get_Command();
             //cout << IMGPROCESS.command << endl;
         }
-        waitKey(20);
-
+        waitKey(1);
     }
+    
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
