@@ -29,5 +29,8 @@
     <ClInclude Include="SendByte.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OpenCV_Route_Detection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

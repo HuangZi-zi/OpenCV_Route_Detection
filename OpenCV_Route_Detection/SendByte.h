@@ -11,5 +11,5 @@
 #define COMM_RIGHT 			'D'//右转
 #define COMM_SPIN_LEFT		'F'//左旋转
 #define COMM_SPIN_RIGHT		'G'//右旋转
-
+#define COMM_IR				'H'//启动红外寻迹
 int Send(char data);

@@ -34,9 +34,10 @@ public:
     Mat img_segment[3];//上、中、下三个判别区域
     int position[3][2];//左、右标线的中心X座标
     int status[3];//道路中心座标
-    int flag=0;//上中下三个判别区域的标识点情况
+    int flag_position = 0;//标线判别标识
     char command = COMM_BRAKE;
     Scalar t;//二值化阈值
+    int flag = 0;//地面反光标识
 };
 
 void Img::import_picture(Mat& origin)
@@ -67,28 +68,25 @@ public:
 void ImgProcess::Basic_Process(Mat& img)
 {
     //imshow("origin", img);
-    
-
-    
-    //亮度调整
-    LUT(img, lookUpTable, img);
-    //imshow("luts", img);
-    //cvtColor(img, mask, COLOR_BGR2GRAY);    
-    //t = mean(mask);
-    //threshold(mask, mask, t[0]+30, 255, cv::THRESH_BINARY);
-    ////imshow("mask", mask);
-    //illuminationChange(img, mask, img, 0.2, 0.4);
-    ////imshow("no highlight", img);
-    img.convertTo(img, -1, 1.5, -30.0);
-    //imshow("contrast", img);
-
-    
+ 
+    //判断地面是否反光
+    cvtColor(img, mask, COLOR_BGR2GRAY);
+    t = mean(mask);
+    threshold(mask, mask, t[0] + 30, 255, cv::THRESH_BINARY);
+    if (mean(mask)[0] > 85)
+    {
+        flag = 1;
+    }
+    else
+    {
+        flag = 0;
+    }
     //灰度
     cvtColor(img, img, COLOR_BGR2GRAY);
     //二值化
     t = mean(img);
-    threshold(img, img, 55, 255, cv::THRESH_BINARY);
-    //imshow("after threshold", img);
+    threshold(img, img, t[0]/2, 255, cv::THRESH_BINARY);
+    //imshow("first threshold", img);
     //膨胀
     dilate(img, img, kernel_dil_7);
     //imshow("dilate", img);
@@ -133,7 +131,7 @@ void ImgProcess::Find_Position()
         findContours(img_segment[i], contours, hierachy, RETR_EXTERNAL, CHAIN_APPROX_NONE, Point());
         int size = contours.size();
         //cout << "size of segment " << i << " is " << size << endl;
-        flag *= 10;
+        flag_position *= 10;
         switch (size)
         {
         case 0:
@@ -144,14 +142,14 @@ void ImgProcess::Find_Position()
             M = moments(contours[0]);
             position[i][0] = int(M.m10 / M.m00);
             position[i][1] = 0;
-            flag += 1;
+            flag_position += 1;
             break;
         default:
             M = moments(contours[0]);
             position[i][0] = int(M.m10 / M.m00);
             M = moments(contours[1]);
             position[i][1] = int(M.m10 / M.m00);
-            flag += 2;
+            flag_position += 2;
             break;
         }
         //cout << "1: " << position[i][0] << "; " << "2: " << position[i][1] << endl;
@@ -171,81 +169,89 @@ void ImgProcess::Find_Position()
 /*判断控制指令*/
 void ImgProcess::Get_Command()
 {
-    switch (flag)
+    if (flag)
     {
-    case 222:
-    case  22:
-    case 202:
-    case 220:
-    case 122:
-    case 212:
-    case 221:
-    case 112:
-    case 121:
-    case 211:
-    case  12:
-    case 102:
-    case 120:
-    case  21:
-    case 201:
-    case 210:
-    case 200:
-    case  20:
-    case   2:
-        command = COMM_FORWARD;
-        cout << "FORWARD" << endl;
-        //cout << command << endl;
-        break;
-    case 111:
-    case  11:
-        if (status[1] - status[2] > 0 && position[2][0] < 160)
-        {
-            command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
-        }
-        else
-        {
-            command = COMM_LEFT;
-            cout << "LEFT" << endl;
-        }
-        break;
-    case 110:
-        if (status[0] - status[1] > 0 && position[1][0] < 200)
-        {
-            command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
-        }
-        else
-        {
-            command = COMM_LEFT;
-            cout << "LEFT" << endl;
-        }
-        break;
-    case 101:
-        if (status[0] - status[2] > 0 && position[2][0] < 160)
-        {
-            command = COMM_RIGHT;
-            cout << "RIGHT" << endl;
-        }
-        else
-        {
-            command = COMM_LEFT;
-            cout << "LEFT" << endl;
-        }
-        break;
-    case 100:
-    case  10:
-    case   1:
-    case   0:
-        command = COMM_BACK;
-        cout << "BACK" << endl;
-        break;
-    default:
-        command = COMM_BRAKE;
-        cout << "ERR!!!" << endl;
-        break;
+        command = COMM_IR;
+        cout << "IR Tracing!!!" << endl;
     }
-    flag = 0;
+    else
+    {
+        switch (flag_position)
+        {
+        case 222:
+        case  22:
+        case 202:
+        case 220:
+        case 122:
+        case 212:
+        case 221:
+        case 112:
+        case 121:
+        case 211:
+        case  12:
+        case 102:
+        case 120:
+        case  21:
+        case 201:
+        case 210:
+        case 200:
+        case  20:
+        case   2:
+            command = COMM_FORWARD;
+            cout << "FORWARD" << endl;
+            //cout << command << endl;
+            break;
+        case 111:
+        case  11:
+            if (status[1] - status[2] > 0 && position[2][0] < 160)
+            {
+                command = COMM_RIGHT;
+                cout << "RIGHT" << endl;
+            }
+            else
+            {
+                command = COMM_LEFT;
+                cout << "LEFT" << endl;
+            }
+            break;
+        case 110:
+            if (status[0] - status[1] > 0 && position[1][0] < 200)
+            {
+                command = COMM_RIGHT;
+                cout << "RIGHT" << endl;
+            }
+            else
+            {
+                command = COMM_LEFT;
+                cout << "LEFT" << endl;
+            }
+            break;
+        case 101:
+            if (status[0] - status[2] > 0 && position[2][0] < 160)
+            {
+                command = COMM_RIGHT;
+                cout << "RIGHT" << endl;
+            }
+            else
+            {
+                command = COMM_LEFT;
+                cout << "LEFT" << endl;
+            }
+            break;
+        case 100:
+        case  10:
+        case   1:
+        case   0:
+            command = COMM_BACK;
+            cout << "BACK" << endl;
+            break;
+        default:
+            command = COMM_BRAKE;
+            cout << "ERR!!!" << endl;
+            break;
+        }
+    }
+    flag_position = 0;
 }
 
 /*计算查找表*/
@@ -315,7 +321,7 @@ int main()
         });
     senderThread.detach();
 
-    Sleep(2000);//等待读取视频的线程初始化
+    Sleep(1000);//等待读取视频的线程初始化
     
 
     ////这一段用来导入图片并处理

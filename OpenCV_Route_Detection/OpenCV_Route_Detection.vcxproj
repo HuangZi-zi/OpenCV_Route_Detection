@@ -134,6 +134,7 @@
     <ClCompile Include="SendByte.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="OpenCV_Route_Detection.h" />
     <ClInclude Include="SendByte.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

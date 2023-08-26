@@ -35,3 +35,18 @@ void PixelVisit::mat_pixel_visit_ptr(Mat& image)
     low_pixel = blackPixelAddress_Low[5];
 }
 */
+
+/*
+简述：通过调整图像高光区域的亮度来避免地面反光的影响
+//亮度调整
+LUT(img, lookUpTable, img);
+imshow("luts", img);
+cvtColor(img, mask, COLOR_BGR2GRAY);    
+t = mean(mask);
+threshold(mask, mask, t[0]+30, 255, cv::THRESH_BINARY);
+imshow("mask", mask);
+illuminationChange(img, mask, img, 0.2, 0.4);
+//imshow("no highlight", img);
+img.convertTo(img, -1, 1.5, -30.0);
+imshow("contrast", img);
+*/
