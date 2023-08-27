@@ -73,7 +73,8 @@ void ImgProcess::Basic_Process(Mat& img)
     cvtColor(img, mask, COLOR_BGR2GRAY);
     t = mean(mask);
     threshold(mask, mask, t[0] + 30, 255, cv::THRESH_BINARY);
-    if (mean(mask)[0] > 85)
+    t = mean(mask);
+    if (t[0] > 55)
     {
         flag = 1;
     }
@@ -173,6 +174,7 @@ void ImgProcess::Get_Command()
     {
         command = COMM_IR;
         cout << "IR Tracing!!!" << endl;
+        flag = 0;
     }
     else
     {
@@ -242,8 +244,8 @@ void ImgProcess::Get_Command()
         case  10:
         case   1:
         case   0:
-            command = COMM_BACK;
-            cout << "BACK" << endl;
+            command = COMM_IR;
+            cout << "IR Tracing" << endl;
             break;
         default:
             command = COMM_BRAKE;
@@ -289,7 +291,6 @@ void capture_frame(void)
             return;
         }
         if (m_vec_frame.size() > 3) m_vec_frame.clear();//缓存过多时丢掉缓存的内容以保证实时性
-
         m_vec_frame.push_back(origin);
     }
 }
@@ -301,7 +302,7 @@ int main()
     Mat frame;
     int size;
     
-    IMGPROCESS.Prepare_LUTS();
+    //IMGPROCESS.Prepare_LUTS();
 
     
     // Create a thread for capturing image
